@@ -1,8 +1,6 @@
-</>Markdown
-
 ## jigyasa_tree
 
-jigyasa_tree is a Python library for building, visualizing, pruning and interactively refining decision tree classifiers. 
+jigyasa_tree is a Python library for building, visualizing, pruning and interactively refining binary decision tree classifiers. 
 It provides tools for inspecting tree structure, generating rules, manually adjusting splits and improving model explainability.
 
 ---
@@ -28,8 +26,8 @@ Clone the repository and install the package locally:
 
 ```bash
 git clone
-https://github.com/<username>/<repository>.git
-cd <repository>
+https://github.com/jigyasa-analytics/jigyasa_tree.git
+cd jigyasa_tree
 pip install .
 ```
 
@@ -44,22 +42,22 @@ from matplotlib.pyplot as plt
 #Create Jigyasa_Tree
 tree=Jigyasa_Tree(target_name=target,criterion = 'entropy', min_samples_leaf = 0.10, random_state = 42)
 
-#fit
+#Fit the tree
 tree.fit(train_data, val_data, X_train,y_train, X_val, y_val)
 
-#generate plot
+#Generate plot
 plot_result=tree.plot()
 fig=plot_result['figure']
 plt.show()
 
-#PRUNE
+#Prune a node
 tree.prune(node_id=0)
 
-#SUGGEST
+#Suggest splits with other features at pruned node
 var_list= X_train.columns[2:4].to_list()
 best_split, suggestions=tree.suggest_splits(var_list=var_list, node_id=0)
 
-#CREATE SUBTREE and add To node_id
+#Create subtree and add to node_id
 tree.create_subtree(node_id=0, var_to_add=best_split["feature"])
 
 #Save and load tree
@@ -79,7 +77,7 @@ Jigyasa_Tree(target_name, **tree_params)
 
 ### Methods
 
-## Fit 
+## Fit the tree
 
 ```python
 tree.fit(train_data, val_data, X_train, y_train, X_val, y_val)
@@ -89,7 +87,7 @@ Fits the model, generate rules and adds tree-node variables to the training and 
 
 ---
 
-## plot
+## Plot the tree
 
 ```python
 plot_result= tree.plot()
@@ -103,7 +101,7 @@ Example
 fig = plot_result['figure'] 
 ```
 ---
-## Prune
+## Prune a node of the tree
 
 ```python
 tree.prune(node_id)
@@ -113,7 +111,7 @@ Prunes a specified node from the tree
 
 ---
 
-## suggest
+## Suggest splits with other features at pruned node
 
 ```python
 best_split, suggestions=tree.suggest_splits(var_list, node_id)
@@ -124,17 +122,17 @@ Returns:
 
 ---
 
-## create Manual tree
+## Create manual tree with a new feature at pruned node
 
 ```python
 tree.create_subtree(node_id, feature)
 ```
 
-Attatch the depth 1 subtree of selected feature to the node_id
+Attach the depth 1 subtree of selected feature to the node_id
 
 ---
 
-## Get Tree rules
+## Get tree rules
 
 ```python
 rule_strings=tree.get_rules()
@@ -177,22 +175,14 @@ loaded_tree=Jigyasa_Tree.load(path)
 ```
 ---
 
-## Running Tests
-
-```bash
-pytest
-```
-
----
-
 ## Requirements
 
- -python >= 3.10
- -numpy >= 1.23
- -pandas >= 2.2
- -scikit-learn >= 1.2
- -matplotlib >= 3.6
- -joblib >= 1.2
+ - python >= 3.10
+ - numpy >= 1.23
+ - pandas >= 2.2
+ - scikit-learn >= 1.2
+ - matplotlib >= 3.6
+ - joblib >= 1.2
 
 ---
 
@@ -203,7 +193,7 @@ pytest
  
 ---
 
-## Limitation and Design Constrains
+## Limitation and Design Constraints
 
 ## 1. Binary Classification Only
  - Supports binary classification only
@@ -211,7 +201,7 @@ pytest
  - No regression support
 
 ## 2. Subtree Restriction
- - Cannot attach a subtree to an original LEAF nodes
+ - Cannot attach a subtree to an original LEAF node
  - Only a pruned node can be replaced
 
 ## 3. Tree growth Constraint
