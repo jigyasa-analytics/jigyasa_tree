@@ -1,8 +1,6 @@
-</>Markdown
-
 ## jigyasa_tree
 
-jigyasa_tree is a Python library for building, visualizing, pruning and interactively refining decision tree classifiers. 
+jigyasa_tree is a Python library for building, visualizing, pruning and interactively refining binary decision tree classifiers. 
 It provides tools for inspecting tree structure, generating rules, manually adjusting splits and improving model explainability.
 
 ---
@@ -27,9 +25,8 @@ It provides tools for inspecting tree structure, generating rules, manually adju
 Clone the repository and install the package locally:
 
 ```bash
-git clone
-https://github.com/<username>/<repository>.git
-cd <repository>
+git clone https://github.com/jigyasa-analytics/jigyasa_tree.git
+cd jigyasa_tree
 pip install .
 ```
 
@@ -39,33 +36,71 @@ pip install .
 ```python
 
 from jigyasa_tree import Jigyasa_Tree
-from matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+import pandas as pd
+
+data=load_iris()
+    
+df=pd.DataFrame(data.data, columns=data.feature_names)
+df["target"]=data.target
+
+#Restrict to binary
+df=df[df["target"] != 2]
+
+#Train test split
+train_data, val_data=train_test_split(
+    df,
+    test_size=0.2,
+    random_state=42,
+     stratify=df["target"]
+    )
+
+
+X_train=train_data.drop(columns="target")
+y_train=train_data["target"]
+
+X_val=val_data.drop(columns="target")
+y_val=val_data["target"]
+
+tree_params={'criterion': 'entropy', 'min_samples_leaf':0.10, 'random_state':42, 'max_depth': 3}
+target="target"
 
 #Create Jigyasa_Tree
 tree=Jigyasa_Tree(target_name=target,criterion = 'entropy', min_samples_leaf = 0.10, random_state = 42)
 
-#fit
-tree.fit(train_data, val_data, X_train,y_train, X_val, y_val)
+#Fit the tree
+tree.fit(train_data, val_data, X_train, y_train, X_val, y_val)
 
-#generate plot
+#Generate plot
 plot_result=tree.plot()
 fig=plot_result['figure']
 plt.show()
 
-#PRUNE
+#Prune a node
 tree.prune(node_id=0)
 
-#SUGGEST
-var_list= X_train.columns[2:4].to_list()
-best_split, suggestions=tree.suggest_splits(var_list=var_list, node_id=0)
+#Variables list to get suggestion
+var_list= X_train.columns[0:2].to_list()
+print(f"Variable List:{var_list}")
 
-#CREATE SUBTREE and add To node_id
+#Suggest splits with other features at pruned node
+best_split, suggestions=tree.suggest_splits(var_list=var_list, node_id=0)
+print(f"Best Split:{best_split['feature']}")
+
+#Create subtree and add to node_id
 tree.create_subtree(node_id=0, var_to_add=best_split["feature"])
 
 #Save and load tree
 tree.save("tree_model.pkl")
 
 loaded_tree=Jigyasa_Tree.load("tree_model.pkl")
+
+#Generate plot for the manual tree
+plot_result=tree.plot()
+fig=plot_result['figure']
+plt.show()
 ```
 ---
 
@@ -79,7 +114,7 @@ Jigyasa_Tree(target_name, **tree_params)
 
 ### Methods
 
-## Fit 
+## Fit the tree
 
 ```python
 tree.fit(train_data, val_data, X_train, y_train, X_val, y_val)
@@ -89,7 +124,7 @@ Fits the model, generate rules and adds tree-node variables to the training and 
 
 ---
 
-## plot
+## Plot the tree
 
 ```python
 plot_result= tree.plot()
@@ -103,7 +138,7 @@ Example
 fig = plot_result['figure'] 
 ```
 ---
-## Prune
+## Prune a node of the tree
 
 ```python
 tree.prune(node_id)
@@ -113,7 +148,7 @@ Prunes a specified node from the tree
 
 ---
 
-## suggest
+## Suggest splits with other features at pruned node
 
 ```python
 best_split, suggestions=tree.suggest_splits(var_list, node_id)
@@ -124,17 +159,17 @@ Returns:
 
 ---
 
-## create Manual tree
+## Create manual tree with a new feature at pruned node
 
 ```python
 tree.create_subtree(node_id, feature)
 ```
 
-Attatch the depth 1 subtree of selected feature to the node_id
+Attach the depth 1 subtree of selected feature to the node_id
 
 ---
 
-## Get Tree rules
+## Get tree rules
 
 ```python
 rule_strings=tree.get_rules()
@@ -176,24 +211,18 @@ tree.save(path)
 loaded_tree=Jigyasa_Tree.load(path)
 ```
 ---
-
-## Running Tests
-
-```bash
-pytest
-```
-
----
-
 ## Requirements
 
- -python >= 3.10
- -numpy >= 1.23
- -pandas >= 2.2
- -scikit-learn >= 1.2
- -matplotlib >= 3.6
- -joblib >= 1.2
+This package requires the following dependencies:
 
+| Dependency | Required Version |
+|---|---|
+| Python | 3.10 – 3.13 |
+| NumPy | `>=1.23,<1.25` for Python < 3.12; `>=2.0` for Python >= 3.12 and < 3.14 |
+| Pandas | `>=2.2,<2.4` |
+| Scikit-learn | `>=1.2,<1.8` |
+| Matplotlib | `>=3.6,<3.7` |
+| Joblib | `>=1.2,<1.6` |
 ---
 
 ## Project status
@@ -203,7 +232,7 @@ pytest
  
 ---
 
-## Limitation and Design Constrains
+## Limitation and Design Constraints
 
 ## 1. Binary Classification Only
  - Supports binary classification only
@@ -211,7 +240,7 @@ pytest
  - No regression support
 
 ## 2. Subtree Restriction
- - Cannot attach a subtree to an original LEAF nodes
+ - Cannot attach a subtree to an original LEAF node
  - Only a pruned node can be replaced
 
 ## 3. Tree growth Constraint
