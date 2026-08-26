@@ -1,71 +1,65 @@
 [build-system]
-requires = ["setuptools >= 68", "wheel"]
+requires = ["setuptools >= 77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "jigyasa_tree"
 version = "0.1.0"
-description = "A decision Tree builder for manual pruning, split suggestion and subtree refinement."
+description = "A decision tree builder for manual pruning, split suggestion, and subtree refinement."
 readme = "README.md"
-requires-python = ">=3.10, <3.14"
+requires-python = ">=3.10, <3.15"
 license = "MIT"
 license-files = ["LICENSE"]
 
 authors = [
-	{name = "jigyasa-analytics"},
-	]
-
+    {name = "jigyasa-analytics"},
+]
 
 dependencies = [
-	"numpy >= 1.23, < 1.25; python_version < '3.12'",
-	"numpy >= 2.0; python_version >= '3.12' and python_version < '3.14'",
-	"pandas >= 2.2,<2.4",
-	"scikit-learn >= 1.2,<1.8",
-	"matplotlib >= 3.6,<3.7",
-	"joblib >= 1.2,<1.6"
+    "numpy >= 1.23, < 1.25; python_version < '3.12'",
+    "numpy >= 2.0; python_version >= '3.12' and python_version < '3.15'",
+    "pandas >= 2.2, < 2.4",
+    "scikit-learn >= 1.2, < 1.8",
+    "matplotlib >= 3.6, < 4.0",
+    "joblib >= 1.2, < 1.6"
 ]
-
 
 keywords = [
-	"decision-tree",
-	"machine-learning",
-	"classification",
-	"scikit-learn",
-	"tree-pruning",
-	"explainable-ai"
+    "decision-tree",
+    "machine-learning",
+    "classification",
+    "scikit-learn",
+    "tree-pruning",
+    "explainable-ai"
 ]
-
-
 
 classifiers = [
-	"Programming Langauge :: python :: 3.11",
-	"Programming Langauge :: python :: 3.12",
-	"Programming Langauge :: python :: 3.13",
-	"Operating System :: Os Independent",
-	"Topic :: Scientific/Engineering :: Artificial Intelligene",
-	"Topic :: Software Development",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development",
 ]
 
-
-[project.optional-dependencies] 
+[project.optional-dependencies]
 dev = [
-	"pytest >= 9.0,<9.2",
-	"build",
-	"twine",
+    "pytest >= 9.0, < 9.2",
+    "build",
+    "twine",
 ]
-
 
 [tool.setuptools]
 package-dir = {"" = "src"}
 
-
 [tool.setuptools.packages.find]
 where = ["src"]
-
 
 [tool.pytest.ini_options]
 testpaths = ["test"]
 python_files = ["test_*.py"]
-python_funcions = ["test_*"]
+python_functions = ["test_*"]
 addopts = "-v -ra --disable-warnings"
-

@@ -217,11 +217,11 @@ This package requires the following dependencies:
 
 | Dependency | Required Version |
 |---|---|
-| Python | 3.10 – 3.13 |
-| NumPy | `>=1.23,<1.25` for Python < 3.12; `>=2.0` for Python >= 3.12 and < 3.14 |
+| Python | `>=3.10,<3.15` |
+| NumPy | `>=1.23,<1.25` for Python < 3.12; `>=2.0` for Python >= 3.12 and < 3.15 |
 | Pandas | `>=2.2,<2.4` |
 | Scikit-learn | `>=1.2,<1.8` |
-| Matplotlib | `>=3.6,<3.7` |
+| Matplotlib | `>=3.6,<4.0` |
 | Joblib | `>=1.2,<1.6` |
 ---
 
