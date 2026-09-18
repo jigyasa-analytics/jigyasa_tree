@@ -33,7 +33,7 @@ def plot_tree(model,feature_names,impurity=True, proportion=True, title=None, ta
         p = p[p > 0]
         return -np.sum(p * np.log2(p))
 
-    def logworth(v):
+    def logloss(v):
         p = probs(v)
         return -np.sum(p * np.log(p + 1e-9))
 
@@ -98,7 +98,7 @@ def plot_tree(model,feature_names,impurity=True, proportion=True, title=None, ta
             impurity_text=f"""
 Gini     : {gini(v):.3f}
 Entropy  : {entropy(v):.3f}
-LogWorth : {logworth(v):.3f}
+LogLoss : {logloss(v):.3f}
 """
             
 
