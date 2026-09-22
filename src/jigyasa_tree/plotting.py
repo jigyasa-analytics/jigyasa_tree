@@ -98,7 +98,7 @@ def plot_tree(model,feature_names,impurity=True, proportion=True, title=None, ta
             impurity_text=f"""
 Gini     : {gini(v):.3f}
 Entropy  : {entropy(v):.3f}
-LogLoss : {logloss(v):.3f}
+LogLoss  : {logloss(v):.3f}
 """
             
 

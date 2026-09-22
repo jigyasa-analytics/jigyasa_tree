@@ -52,7 +52,7 @@ def suggest_splits(datasetZ, RESPONSE_INDZ, Var_listZ, prune_node):
     for cols in X.columns:
         feature_names=X.columns
 
-        clf=DecisionTreeClassifier(criterion="entropy", max_depth=1, min_samples_leaf = 0.10)
+        clf=DecisionTreeClassifier(criterion="entropy", max_depth=1, min_samples_leaf = 0.05)
         clf=clf.fit(X , Y)
         
         #Extract tree structure
