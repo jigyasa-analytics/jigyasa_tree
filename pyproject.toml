@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jigyasa_tree"
-version = "0.1.1"
+version = "0.1.2"
 description = "A decision tree builder for manual pruning, split suggestion, and subtree refinement."
 readme = "README.md"
 requires-python = ">=3.10, <3.15"
@@ -28,6 +28,7 @@ keywords = [
     "decision-tree",
     "machine-learning",
     "classification",
+    "Regression",
     "scikit-learn",
     "tree-pruning",
     "explainable-ai"
@@ -58,8 +59,3 @@ package-dir = {"" = "src"}
 [tool.setuptools.packages.find]
 where = ["src"]
 
-[tool.pytest.ini_options]
-testpaths = ["test"]
-python_files = ["test_*.py"]
-python_functions = ["test_*"]
-addopts = "-v -ra --disable-warnings"

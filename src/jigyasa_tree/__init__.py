@@ -1,8 +1,8 @@
-from .jigyasa_tree_builder import Jigyasa_Tree
+from .classifier import JigyasaTreeClassifier
+from .regressor import JigyasaTreeRegressor
 
-version='0.1.0'
-
-_all__=["Jigyasa_Tree"]
+_all__=["JigyasaTreeClassifier",
+        "JigyasaTreeRegressor"]
 
             
 
