@@ -3,40 +3,71 @@ from sklearn import tree
 import copy
 import numpy as np
 import pandas as pd
+from sklearn import __version__ as sklearn_version
+from packaging.version import Version
 
-def calculate_entropy(samples):
+def use_proportions():
+    return Version(sklearn_version) >= Version("1.4")
+
+
+def calculate_entropy(samples): 
    total_samples=np.sum(samples)
+   if total_samples <= 0:
+       return 0.0
    proportions=samples/total_samples
-   entropy=-np.sum(proportions*np.log2(proportions + 1e-9))
+
+   proportions=proportions[proportions>0]
+   
+   entropy=-np.sum(proportions*np.log2(proportions))
    return entropy
 
 
 def calculate_response_rate(node_value):
     total_samples=node_value.sum()
+    if total_samples <= 0:
+       return np.zeros_like(node_value, dtype=float)
     response_rates=node_value/total_samples
     return response_rates
 
 
 def get_node_counts(tree_structure, node_id):
-   value=tree_structure.value[node_id].flatten()
-   samples= tree_structure.n_node_samples[node_id]
-   if np.isclose(value.sum(),1.0):
+   value=tree_structure.value[node_id].flatten().copy()
+   
+   if use_proportions():
+      samples= tree_structure.n_node_samples[node_id]
       value=value * samples
 
    return value
 
-def suggest_splits(datasetZ, RESPONSE_INDZ, Var_listZ, prune_node):
+def get_all_classes_counts(tree_structure, node_id, model_classes, all_classes):
+   value=get_node_counts(tree_structure, node_id)
+
+   counts=np.zeros(len(all_classes), dtype=float)
+
+   class_positions={cls: i for i, cls in enumerate(all_classes)}
+
+   for i, cls in enumerate(model_classes):
+      counts[class_positions[cls]]=value[i]
+
+   return counts
+
+def suggest_splits(datasetZ, RESPONSE_INDZ, Var_listZ, prune_node, all_classes):
 
     col=f"NO{prune_node}"
 
     if col not in datasetZ.columns:
         raise ValueError(f"{col} does not exist")
 
+    print(f" All Classes:{all_classes}")
+
     datasetZ_filtered = datasetZ[datasetZ[col]==1].copy()
     
 
     Y = datasetZ_filtered[RESPONSE_INDZ]
     X = datasetZ_filtered[Var_listZ]
+
+
+    print(f"Model classes:{np.sort(datasetZ_filtered[RESPONSE_INDZ].unique())}")
 
     num_samples, num_features = np.shape(X)
     print(X.head())
@@ -83,11 +114,11 @@ def suggest_splits(datasetZ, RESPONSE_INDZ, Var_listZ, prune_node):
         root_threshold=tree_structure.threshold[root_node_id] if tree_structure.feature[root_node_id]!=-2 else None
         root_impurity=tree_structure.impurity[root_node_id]
         root_samples=tree_structure.n_node_samples[root_node_id]
-        root_value=get_node_counts(tree_structure, root_node_id)
+        root_value=get_all_classes_counts(tree_structure, root_node_id, clf.classes_, all_classes)
         root_response_rate=calculate_response_rate(root_value)
         root_entropy=calculate_entropy(root_value)
 
-        leaf_nodes1={'left Node': 1,'Right Node': 2}
+        leaf_nodes1={'Left Node': 1,'Right Node': 2}
         leaf_nodes=[1,2]
         
         leaf_details={}
@@ -105,7 +136,7 @@ def suggest_splits(datasetZ, RESPONSE_INDZ, Var_listZ, prune_node):
             threshold=tree_structure.threshold[node_id] if tree_structure.feature[node_id]!=-2 else None
             impurity=tree_structure.impurity[node_id]
             samples=tree_structure.n_node_samples[node_id]
-            value=get_node_counts(tree_structure, node_id)
+            value=get_all_classes_counts(tree_structure, node_id, clf.classes_, all_classes)
             leaf_response_rate=calculate_response_rate(value)
             leaf_entropy=calculate_entropy(value)        
              
@@ -125,24 +156,22 @@ def suggest_splits(datasetZ, RESPONSE_INDZ, Var_listZ, prune_node):
                 'Feature Name':root_feature,
                 'Threshold':root_threshold,
                 'Samples at root node':root_samples,
-                'Root Node Response rate':root_response_rate[1],
                 'Root Entropy':root_entropy
                 }
 
 
-        for i,count in enumerate(root_value):
-            combined_row[f'Root Node Resp={i}']=count
+        for i, cls in enumerate(all_classes):
+           combined_row[f'Root Node resp={cls}']=root_response_rate[i]
 
 
 
         for position,details in leaf_details.items() :
             combined_row[f'{position} Samples']=details['Leaf Samples']
-            combined_row[f'{position} Resp Rate']=details['Response Rate'][1]
             combined_row[f'{position} Entropy']=details['Entropy']                    
 
-            for i,count in enumerate(details['Leaf Value']):
-                combined_row[f'{position} resp= {i} ']=count
             
+            for i, cls in enumerate(all_classes):
+               combined_row[f'{position} resp={cls}']=details['Response Rate'][i]
 
 
         df=pd.DataFrame([combined_row])
@@ -150,9 +179,9 @@ def suggest_splits(datasetZ, RESPONSE_INDZ, Var_listZ, prune_node):
 
 
 
-        total_samples=np.sum(df['Samples at root node'])
+        total_samples = df['Samples at root node']
         df['Information_gain']=df['Root Entropy']-(
-            (df['left Node Samples']/total_samples)*df['left Node Entropy'] +
+            (df['Left Node Samples']/total_samples)*df['Left Node Entropy'] +
             (df['Right Node Samples']/total_samples)*df['Right Node Entropy']
             )
 

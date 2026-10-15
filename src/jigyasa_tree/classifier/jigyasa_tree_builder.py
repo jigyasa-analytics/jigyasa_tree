@@ -114,7 +114,7 @@ class JigyasaTreeClassifier:
 
         self.var_list=var_list        
 
-        best_split,self.suggestions=suggest_splits(self.node_train, self.target_name, self.var_list, node_id)
+        best_split,self.suggestions=suggest_splits(self.node_train, self.target_name, self.var_list, node_id, all_classes=self.org_model.classes_)
 
         return best_split, self.suggestions
 

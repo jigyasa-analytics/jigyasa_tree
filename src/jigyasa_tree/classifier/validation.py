@@ -31,9 +31,6 @@ def check_training_data(X_train, y_train):
         if not np.all(np.mod(y_train, 1) == 0):
             raise ValueError("Continuous targets detected. Regression is not supported")
 
-    if y_train.nunique() > 2:
-        raise ValueError("Only binary classification is supported.Target contains more than two classes")
-
     
 
 
@@ -67,10 +64,10 @@ def check_val_data(X_val, y_val):
         if not np.all(np.mod(y_val, 1) == 0):
             raise ValueError("Continuous targets detected. Regression is not supported")
 
-
+'''
     if y_val.nunique() > 2:
         raise ValueError("Only binary classification is supported.Target contains more than two classes")
-
+'''
     
             
 

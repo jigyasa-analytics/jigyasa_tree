@@ -1,14 +1,16 @@
 from sklearn.tree import _tree
-
 import matplotlib.pyplot as plt
 import numpy as np
+from sklearn import __version__ as sklearn_version
+from packaging.version import Version
 
+def use_proportions():
+    return Version(sklearn_version) >= Version("1.4")
 
-def get_node_counts(tree_structure, node_id):
-    
-    value = tree_structure.value[node_id].flatten()
+def get_node_counts(tree_structure, node_id):    
+    value = tree_structure.value[node_id].flatten().copy()
     samples = tree_structure.n_node_samples[node_id]
-    if np.isclose(value.sum(), 1.0):
+    if use_proportions():
         value = value * samples
 
     return value
@@ -75,6 +77,7 @@ def plot_tree(
 
         lines = []
 
+        name_width=max(8, max(len(str(c)) for c in class_names))
         for i, cname in enumerate(class_names):
 
             count = v[i]
@@ -85,17 +88,17 @@ def plot_tree(
 
             if proportion is False:
                 lines.append(
-                    f"{str(cname):<5} "
-                    f"{int(round(count)):<4} "
-                    f"{bar:<15}"
+                    f"  {str(cname):<{name_width}}"
+                    f"  {int(round(count)):>8}"
+                    f"  {bar:<15}"
                 )
 
             else:
                 lines.append(
-                    f"{str(cname):<5} "
-                    f"{int(round(count)):<4} "
-                    f"({p[i]:<4.2f}) "
-                    f"{bar:<15}"
+                    f"  {str(cname):<{name_width}}"
+                    f"  {int(round(count)):>8}"
+                    f"  ({p[i]:>4.4f})"
+                    f"  {bar:<15}"
                 )
 
         return "\n".join(lines)

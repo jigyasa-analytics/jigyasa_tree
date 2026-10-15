@@ -1,6 +1,6 @@
 ## jigyasa_tree
 
-jigyasa_tree is a Python library for building, visualizing, pruning and interactively refining decision trees for binary classification and regression.
+jigyasa_tree is a Python library for building, visualizing, pruning and interactively refining decision trees for classification and regression.
 It provides tools for inspecting tree structure, generating rules, manually adjusting splits, creating custom subtrees and improving model explainability.
 
 ---
@@ -8,7 +8,7 @@ It provides tools for inspecting tree structure, generating rules, manually adju
 ## Features
 
  - Train Decision tree models using the scikit-learn backend
- - Support binary classification and regression
+ - Support classification and regression
  - Visualize Decision Trees
  - Generate Decision Rules
  - Inspect node-level data
@@ -33,7 +33,7 @@ pip install .
 
 ---
 
-## Full Workflow Example - Binary Classification
+## Full Workflow Example - Classification
 ```python
 from jigyasa_tree import JigyasaTreeClassifier
 import matplotlib.pyplot as plt
@@ -45,9 +45,6 @@ data=load_iris()
     
 df=pd.DataFrame(data.data, columns=data.feature_names)
 df["target"]=data.target
-
-#Restrict the dataset to two classes because JigyasaTreeClassifier currently supports binary classification only
-df=df[df["target"] != 2]
 
 #Train test split
 train_data, val_data=train_test_split(
@@ -79,18 +76,18 @@ fig=plot_result['figure']
 plt.show()
 
 #Prune a node
-tree.prune(node_id=0)
+tree.prune(node_id=2)
 
 #select candidate variables for split suggestion
 var_list= X_train.columns[0:2].to_list()
 print(f"Variable List:{var_list}")
 
 #Suggest alternative split at the pruned node
-best_split, suggestions=tree.suggest_splits(var_list=var_list, node_id=0)
+best_split, suggestions=tree.suggest_splits(var_list=var_list, node_id=2)
 print(f"Best Split:{best_split['feature']}")
 
 #Create subtree using the recommended feature
-tree.create_subtree(node_id=0, var_to_add=best_split["feature"])
+tree.create_subtree(node_id=2, var_to_add=best_split["feature"])
 
 #Save and load tree
 tree.save("tree_model.pkl")
@@ -186,7 +183,7 @@ from jigyasa_tree import JigyasaTreeClassifier, JigyasaTreeRegressor
 ```python
 JigyasaTreeClassifier(target_name, **tree_params)
 ```
-Creates a decision tree for binary classification
+Creates a decision tree for classification
 ---
 
 ## JigyasaTreeRegressor
@@ -326,27 +323,17 @@ This package requires the following dependencies:
 | Joblib | `>=1.2,<1.6` |
 ---
 
-## Project status
-
- - version 0.1.0
- - status: initial release
- 
----
 
 ## Limitation and Design Constraints
 
-## 1. Binary Classification and Regression support
- - Supports binary classification and Regression
- - Multi-class classification is not currently supported
-
-## 2. Subtree Restrictions
+## 1. Subtree Restrictions
  - Cannot attach a subtree to an original LEAF node
  - Only a pruned node can be replaced
 
-## 3. Tree growth Constraint
+## 2. Tree growth Constraint
  - After pruning, tree can regrow only up to the depth of the original tree
 
-## 4. Data requirements
+## 3. Data requirements
  - No missing values allowed
  - All features must be numeric or encoded
 

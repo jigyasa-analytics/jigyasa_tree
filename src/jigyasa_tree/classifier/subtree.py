@@ -3,9 +3,13 @@ from sklearn import tree
 import copy
 import numpy as np
 import pandas as pd
+from sklearn import __version__ as sklearn_version
+from packaging.version import Version
+
+def use_proportions():
+    return Version(sklearn_version) >= Version("1.4")
 
 def collect_nodes(tree):
-
     nodes=set()
 
     def dfs(node):
@@ -28,6 +32,19 @@ def get_free_nodes(org_tree, mod_tree):
 
     return removed
 
+def get_suggestion_values(info, prefix, classes, samples):
+    rates= np.array([float(info[f"{prefix}={cls}"]) for cls in classes],dtype=float)
+
+    if not np.isclose(rates.sum(), 1.0):
+        raise ValueError(f"Invalid Response Rates for {prefix}: {rates}")
+
+    if use_proportions():
+        return rates
+
+    return rates * samples
+                    
+    
+
 def create_manual_subtree(treeZ,node_index_to_changeZ,added_varZ,suggestions, tree_model_org):
 
     if suggestions is None:
@@ -46,18 +63,21 @@ def create_manual_subtree(treeZ,node_index_to_changeZ,added_varZ,suggestions, tr
 
     print(f"feature:{feature}")
     threshold=float(info["Threshold"])
-    root_resp0=float(info["Root Node Resp=0"])
-    root_resp1=float(info["Root Node Resp=1"])
+
+    classes=treeZ.classes_
+        
     root_samples=int(info["Samples at root node"])
+    root_values=get_suggestion_values(info, "Root Node resp", classes, root_samples)
     root_entropy=float(info["Root Entropy"])
 
     feature_index=list(treeZ.feature_names_in_).index(feature)
     
     tree_ind.feature[node_index_to_changeZ]=feature_index
-    tree_ind.value[node_index_to_changeZ]=[[root_resp0,root_resp1]]
+    tree_ind.value[node_index_to_changeZ,0,:]=root_values
     tree_ind.threshold[node_index_to_changeZ]=threshold
     tree_ind.impurity[node_index_to_changeZ]=root_entropy
     tree_ind.n_node_samples[node_index_to_changeZ]=root_samples
+    tree_ind.weighted_n_node_samples[node_index_to_changeZ]=root_samples
 
 
     left_id=tree_ind.children_left[node_index_to_changeZ]
@@ -76,14 +96,14 @@ def create_manual_subtree(treeZ,node_index_to_changeZ,added_varZ,suggestions, tr
         tree_ind.children_left[node_index_to_changeZ]=left_child_ind
         left_id=tree_ind.children_left[node_index_to_changeZ]
         
-        left_samples=int(info["left Node Samples"])
-        left_resp0=float(info["left Node resp= 0 "])
-        left_resp1=float(info["left Node resp= 1 "])
-        left_entropy=float(info["left Node Entropy"])
+        left_samples=int(info["Left Node Samples"])
+        left_values=get_suggestion_values(info, "Left Node resp", classes, left_samples)
+        left_entropy=float(info["Left Node Entropy"])
 
-        tree_ind.value[left_id]=[[left_resp0,left_resp1]]
+        tree_ind.value[left_id,0,:]=left_values
         tree_ind.impurity[left_id]=left_entropy
         tree_ind.n_node_samples[left_id]=left_samples
+        tree_ind.weighted_n_node_samples[left_id]=left_samples
 
         tree_ind.children_left[left_id]=-1
         tree_ind.children_right[left_id]=-1
@@ -103,13 +123,13 @@ def create_manual_subtree(treeZ,node_index_to_changeZ,added_varZ,suggestions, tr
         right_id=tree_ind.children_right[node_index_to_changeZ]
         
         right_samples=int(info["Right Node Samples"])
-        right_resp0=float(info["Right Node resp= 0 "])
-        right_resp1=float(info["Right Node resp= 1 "])
+        right_values=get_suggestion_values(info, "Right Node resp", classes, right_samples)
         right_entropy=float(info["Right Node Entropy"])
 
-        tree_ind.value[right_id]=[[right_resp0,right_resp1]]
+        tree_ind.value[right_id,0,:]=right_values
         tree_ind.impurity[right_id]=right_entropy
-        tree_ind.n_node_samples[right_id]=right_samples    
+        tree_ind.n_node_samples[right_id]=right_samples
+        tree_ind.weighted_n_node_samples[right_id]=right_samples
 
 
         tree_ind.children_left[right_id]=-1

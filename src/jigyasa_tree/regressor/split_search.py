@@ -3,6 +3,11 @@ from sklearn import tree
 import copy
 import numpy as np
 import pandas as pd
+from sklearn import __version__ as sklearn_version
+from packaging.version import Version
+
+def use_proportions():
+    return Version(sklearn_version) >= Version("1.4")
 
 def calculate_mse(y):
     mse =np.mean((y - np.mean(y)**2))
@@ -11,7 +16,7 @@ def calculate_mse(y):
 def get_node_counts(tree_structure, node_id):
    value=tree_structure.value[node_id].flatten()
    samples= tree_structure.n_node_samples[node_id]
-   if np.isclose(value.sum(),1.0):
+   if use_proportions():
       value=value * samples
 
    return value
@@ -44,7 +49,7 @@ def suggest_splits(datasetZ, DEPVAR, Var_listZ, prune_node):
     for cols in X.columns:
         feature_names=X.columns
 
-        clf=DecisionTreeRegressor(criterion="squared_error", max_depth=1, min_samples_leaf = 0.10)
+        clf=DecisionTreeRegressor(criterion="squared_error", max_depth=1, min_samples_leaf = 0.05)
         clf=clf.fit(X , Y)
         
 
