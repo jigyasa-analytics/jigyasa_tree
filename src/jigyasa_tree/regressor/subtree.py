@@ -58,6 +58,7 @@ def create_manual_subtree(treeZ,node_index_to_changeZ,added_varZ,suggestions, tr
     tree_ind.threshold[node_index_to_changeZ]=threshold
     tree_ind.impurity[node_index_to_changeZ]=root_mse
     tree_ind.n_node_samples[node_index_to_changeZ]=root_samples
+    tree_ind.weighted_n_node_samples[node_index_to_changeZ]=root_samples
 
 
     left_id=tree_ind.children_left[node_index_to_changeZ]
@@ -82,6 +83,8 @@ def create_manual_subtree(treeZ,node_index_to_changeZ,added_varZ,suggestions, tr
 
         tree_ind.impurity[left_id]=left_mse
         tree_ind.n_node_samples[left_id]=left_samples
+        tree_ind.weighted_n_node_samples[left_id]=left_samples
+        tree_ind.value[left_id]=[[left_value]]
 
         tree_ind.children_left[left_id]=-1
         tree_ind.children_right[left_id]=-1
@@ -106,6 +109,8 @@ def create_manual_subtree(treeZ,node_index_to_changeZ,added_varZ,suggestions, tr
         
         tree_ind.impurity[right_id]=right_mse
         tree_ind.n_node_samples[right_id]=right_samples
+        tree_ind.weighted_n_node_samples[right_id]=right_samples
+        tree_ind.value[right_id]=[[right_value]]
 
         tree_ind.children_left[right_id]=-1
         tree_ind.children_right[right_id]=-1

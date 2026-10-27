@@ -337,6 +337,9 @@ This package requires the following dependencies:
  - No missing values allowed
  - All features must be numeric or encoded
 
+## 4. Target support
+ - Only single-target classification and regression are currently supported.
+
 ---
 
 ## License
