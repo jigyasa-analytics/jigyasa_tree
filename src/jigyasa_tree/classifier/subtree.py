@@ -32,7 +32,7 @@ def get_free_nodes(org_tree, mod_tree):
 
     return removed
 
-def get_suggestion_values(info, prefix, classes, samples):
+def get_suggestion_values(info, prefix, classes, samples, weighted_samples=None):
     rates= np.array([float(info[f"{prefix}={cls}"]) for cls in classes],dtype=float)
 
     if not np.isclose(rates.sum(), 1.0):
@@ -41,7 +41,7 @@ def get_suggestion_values(info, prefix, classes, samples):
     if use_proportions():
         return rates
 
-    return rates * samples
+    return rates * (samples if weighted_samples is None else weighted_samples)
                     
     
 
@@ -55,29 +55,39 @@ def create_manual_subtree(treeZ,node_index_to_changeZ,added_varZ,suggestions, tr
 
     free_nodes=list(get_free_nodes(tree_model_org,treeZ))
 
+    # Fail before mutating the tree if the original child slots are unavailable.
+    original_structure = tree_model_org.tree_
+    left_slot = int(original_structure.children_left[node_index_to_changeZ])
+    right_slot = int(original_structure.children_right[node_index_to_changeZ])
+    if left_slot == -1 or right_slot == -1 or left_slot not in free_nodes or right_slot not in free_nodes:
+        raise ValueError(
+            "Cannot attach a depth-1 subtree: both original child node IDs "
+            "must be available after pruning"
+        )
+
     tree_ind = treeZ.tree_
     org_tree_ind=tree_model_org.tree_
     
 
     feature=added_varZ
 
-    print(f"feature:{feature}")
     threshold=float(info["Threshold"])
 
     classes=treeZ.classes_
         
     root_samples=int(info["Samples at root node"])
-    root_values=get_suggestion_values(info, "Root Node resp", classes, root_samples)
-    root_entropy=float(info["Root Entropy"])
+    root_weight=float(info.get("Weighted Samples at root node", root_samples))
+    root_values=get_suggestion_values(info, "Root Node resp", classes, root_samples, root_weight)
+    root_impurity=float(info["Root Impurity"])
 
     feature_index=list(treeZ.feature_names_in_).index(feature)
     
     tree_ind.feature[node_index_to_changeZ]=feature_index
     tree_ind.value[node_index_to_changeZ,0,:]=root_values
     tree_ind.threshold[node_index_to_changeZ]=threshold
-    tree_ind.impurity[node_index_to_changeZ]=root_entropy
+    tree_ind.impurity[node_index_to_changeZ]=root_impurity
     tree_ind.n_node_samples[node_index_to_changeZ]=root_samples
-    tree_ind.weighted_n_node_samples[node_index_to_changeZ]=root_samples
+    tree_ind.weighted_n_node_samples[node_index_to_changeZ]=root_weight
 
 
     left_id=tree_ind.children_left[node_index_to_changeZ]
@@ -88,22 +98,21 @@ def create_manual_subtree(treeZ,node_index_to_changeZ,added_varZ,suggestions, tr
 
     left_child_ind=left_id_org
     
-    print(f" {left_child_ind} is in {free_nodes}")     
     if left_child_ind in free_nodes and left_id_org !=-1:
         
-        print("LEFT CHILD UPDATE")
 
         tree_ind.children_left[node_index_to_changeZ]=left_child_ind
         left_id=tree_ind.children_left[node_index_to_changeZ]
         
         left_samples=int(info["Left Node Samples"])
-        left_values=get_suggestion_values(info, "Left Node resp", classes, left_samples)
-        left_entropy=float(info["Left Node Entropy"])
+        left_weight=float(info.get("Left Node Weighted Samples", left_samples))
+        left_values=get_suggestion_values(info, "Left Node resp", classes, left_samples, left_weight)
+        left_impurity=float(info["Left Node Impurity"])
 
         tree_ind.value[left_id,0,:]=left_values
-        tree_ind.impurity[left_id]=left_entropy
+        tree_ind.impurity[left_id]=left_impurity
         tree_ind.n_node_samples[left_id]=left_samples
-        tree_ind.weighted_n_node_samples[left_id]=left_samples
+        tree_ind.weighted_n_node_samples[left_id]=left_weight
 
         tree_ind.children_left[left_id]=-1
         tree_ind.children_right[left_id]=-1
@@ -113,23 +122,22 @@ def create_manual_subtree(treeZ,node_index_to_changeZ,added_varZ,suggestions, tr
 
     right_child_ind=right_id_org
 
-    print(f" {right_child_ind} is in {free_nodes}")     
     if right_child_ind in free_nodes and right_id_org != -1:
 
 
-        print("RIGHT CHILD UPDATE")
 
         tree_ind.children_right[node_index_to_changeZ]= right_child_ind
         right_id=tree_ind.children_right[node_index_to_changeZ]
         
         right_samples=int(info["Right Node Samples"])
-        right_values=get_suggestion_values(info, "Right Node resp", classes, right_samples)
-        right_entropy=float(info["Right Node Entropy"])
+        right_weight=float(info.get("Right Node Weighted Samples", right_samples))
+        right_values=get_suggestion_values(info, "Right Node resp", classes, right_samples, right_weight)
+        right_impurity=float(info["Right Node Impurity"])
 
         tree_ind.value[right_id,0,:]=right_values
-        tree_ind.impurity[right_id]=right_entropy
+        tree_ind.impurity[right_id]=right_impurity
         tree_ind.n_node_samples[right_id]=right_samples
-        tree_ind.weighted_n_node_samples[right_id]=right_samples
+        tree_ind.weighted_n_node_samples[right_id]=right_weight
 
 
         tree_ind.children_left[right_id]=-1

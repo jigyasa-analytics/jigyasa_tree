@@ -1,7 +1,9 @@
+__version__ = "0.1.4"
+
 from .classifier import JigyasaTreeClassifier
 from .regressor import JigyasaTreeRegressor
 
-_all__=["JigyasaTreeClassifier",
+__all__=["JigyasaTreeClassifier",
         "JigyasaTreeRegressor"]
 
             

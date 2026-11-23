@@ -44,7 +44,7 @@ def add_node_variables(model, dataset, feature_names):
         if len(conditions)==0:
             df[col]=1
 
-            rule_text=f"df['{col}']=1"
+            rule_text=f"df[{col!r}]=1"
             rule_strings.append(rule_text)
             continue            
 
@@ -60,11 +60,11 @@ def add_node_variables(model, dataset, feature_names):
             else:
                 mask&=df[feature] > threshold
                     
-            cond_texts.append(f"(df['{feature}']{operator}{threshold})")
+            cond_texts.append(f"(df[{feature!r}]{operator}{float(threshold)!r})")
 
         df[col]=mask.astype(int)
         combined_conditions="&".join(cond_texts)
-        rule_text=(f"df.loc[{combined_conditions},'{col}']=1")            
+        rule_text=(f"df.loc[{combined_conditions},{col!r}]=1")            
         rule_strings.append(rule_text)
 
     return df, rule_strings

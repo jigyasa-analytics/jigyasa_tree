@@ -3,15 +3,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn import __version__ as sklearn_version
 from packaging.version import Version
+from .._fontfit import fit_fontsize
 
 def use_proportions():
     return Version(sklearn_version) >= Version("1.4")
 
 def get_node_counts(tree_structure, node_id):    
     value = tree_structure.value[node_id].flatten().copy()
-    samples = tree_structure.n_node_samples[node_id]
+    #samples = tree_structure.n_node_samples[node_id]
     if use_proportions():
-        value = value * samples
+        value = value * tree_structure.weighted_n_node_samples[node_id]
 
     return value
 
@@ -29,11 +30,22 @@ def plot_tree(
     gradient=False,
     ax=None,
     fontsize=None,
+    node_data=None,
+    effective_sample_weights=None,
 ):
 
 
     class_names = model.classes_
     tree = model.tree_
+    weighted = effective_sample_weights is not None and not np.allclose(effective_sample_weights, 1.0)
+    # Node flags retain original row membership and allow true class counts.
+    actual_node_counts = {}
+    if node_data is not None and target in node_data.columns:
+        for node_id in range(tree.node_count):
+            flag = f"NO{node_id}"
+            if flag in node_data.columns:
+                labels = node_data.loc[node_data[flag] == 1, target]
+                actual_node_counts[node_id] = np.array([(labels == c).sum() for c in class_names])
 
     if ax is None:
         ax = plt.gca()
@@ -72,15 +84,16 @@ def plot_tree(
         p = p[p > 0]
         return -np.sum(p * np.log(p))
 
-    def class_block(v):
+    def class_block(v, node=None):
         p = probs(v)
+        display_counts = actual_node_counts.get(node, v) if weighted else v
 
         lines = []
 
         name_width=max(8, max(len(str(c)) for c in class_names))
         for i, cname in enumerate(class_names):
 
-            count = v[i]
+            count = display_counts[i]
 
             bar = "█" * int(
                 p[i] * 15
@@ -299,8 +312,8 @@ def plot_tree(
     Samples : {n:<5}
     Target  : {target:<9}
 
-    CLASS PROB
-{class_block(v)}
+    {"CLASS WEIGHTED PROB" if weighted else "CLASS PROB"}
+{class_block(v, node)}
     {impurity_text}"""
             )
 
@@ -354,8 +367,8 @@ def plot_tree(
     Level   : {level:<5}
     Samples : {n:<5}
 
-    CLASS PROB
-{class_block(v)}
+    {"CLASS WEIGHTED PROB" if weighted else "CLASS PROB"}
+{class_block(v, node)}
     {impurity_text}"""
             )
 
@@ -369,8 +382,8 @@ def plot_tree(
     Level   : {level:<5}
     Samples : {n:<5}
 
-    CLASS PROB
-{class_block(v)}
+    {"CLASS WEIGHTED PROB" if weighted else "CLASS PROB"}
+{class_block(v, node)}
     {impurity_text}"""
         )
 
@@ -525,94 +538,8 @@ def plot_tree(
 
     fitted_fontsize = fontsize
 
-    if (fontsize is None and len(tree_text) > 0):
-
-        current_fontsize = 8.0
-        min_fontsize = 1.0
-        reduction_factor = 0.90
-
-        max_width_ratio = 0.35
-        max_height_ratio = 0.40
-
-        while (current_fontsize >= min_fontsize ):
-            
-            for txt in tree_text:
-                txt.set_fontsize(current_fontsize)
-                
-            fig.canvas.draw()
-
-            renderer = fig.canvas.get_renderer()            
-
-            boxes = []
-
-            for txt in tree_text:
-
-                bbox = (
-                    txt
-                    .get_bbox_patch()
-                    .get_window_extent(
-                        renderer
-                    )
-                )
-
-                boxes.append(bbox)
-
-            axes_bbox= ax.get_window_extent(renderer)
-            available_width= axes_bbox.width
-            available_height= axes_bbox.height
-
-            oversized= any(box.width > available_width * max_width_ratio
-                           or
-                           box.height > available_height * max_height_ratio
-                           for box in boxes)                           
-
-
-            overlap_found = False
-
-            number_of_boxes = len(boxes)
-
-            for i in range(number_of_boxes):
-
-                for j in range(
-                    i + 1,
-                    number_of_boxes
-                ):
-
-                    if boxes[i].overlaps( boxes[j]):
-
-                        overlap_found = True
-                        break
-
-                if overlap_found:
-                    break
-
-
-            if not overlap_found and not oversized:
-                break
-
-
-            current_fontsize *= (
-                reduction_factor
-            )
-
-
-        current_fontsize = max(
-            current_fontsize,
-            min_fontsize,
-        )
-
-
-        for txt in tree_text:
-
-            txt.set_fontsize(
-                current_fontsize
-            )
-
-        fitted_fontsize = (
-            current_fontsize
-        )
-
-        fig.canvas.draw()    
+    if fontsize is None and len(tree_text) > 0:
+        fitted_fontsize = fit_fontsize(fig, ax, tree_text)
 
 
     return {

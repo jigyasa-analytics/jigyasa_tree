@@ -1,5 +1,8 @@
 from sklearn.tree import _tree
 import copy
+import logging
+
+logger = logging.getLogger(__name__)
 
 def prune_node(model, node_id):
     
@@ -23,7 +26,7 @@ def prune_node(model, node_id):
         recurse(tree.children_right[node])
 
     recurse(0)
-    print(f"Tree is pruned at NODE{node_id}")
+    logger.info("Tree is pruned at NODE%s", node_id)
     return pruned_model
 
             

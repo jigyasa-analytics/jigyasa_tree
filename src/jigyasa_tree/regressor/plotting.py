@@ -2,6 +2,7 @@ from sklearn.tree import _tree
 
 import matplotlib.pyplot as plt
 import numpy as np
+from .._fontfit import fit_fontsize
 
 
 def plot_tree(
@@ -17,6 +18,9 @@ def plot_tree(
     gradient=False,
     ax=None,
     fontsize=None,
+    node_data=None,
+    sample_weight=None,
+    node_criteria=None,
 ):
        
     tree = model.tree_
@@ -33,10 +37,47 @@ def plot_tree(
     if title is not None:
         fig.suptitle(title)
 
-    def mse(v):
-        v1=np.mean((v-np.mean(v))**2)
-        return v1   
+    # Recalculate every displayed metric from the rows reaching each node.
+    # Do not use tree.impurity: it may represent a different graft criterion.
+    target_values = None if node_data is None else node_data[target].to_numpy(dtype=float)
+    weights = None if sample_weight is None else np.asarray(sample_weight, dtype=float)
+    if target_values is not None and weights is not None and len(weights) != len(target_values):
+        raise ValueError("sample_weight and node_data must have the same number of rows")
 
+    def node_metrics(node):
+        if target_values is None:
+            return None
+        membership = node_data[f"NO{node}"].to_numpy() == 1
+        y = target_values[membership]
+        w = np.ones(len(y), dtype=float) if weights is None else weights[membership]
+        positive = w > 0
+        y, w = y[positive], w[positive]
+        if len(y) == 0:
+            return None
+
+        mean = np.average(y, weights=w)
+        mse = float(np.average((y - mean) ** 2, weights=w))
+        order = np.argsort(y, kind="stable")
+        sorted_y, sorted_w = y[order], w[order]
+        # Any weighted median minimizes absolute error; for a half-weight tie,
+        # use the midpoint, as sklearn's median prediction does.
+        cumulative = np.cumsum(sorted_w)
+        midpoint = 0.5 * sorted_w.sum()
+        idx = int(np.searchsorted(cumulative, midpoint, side="left"))
+        median = float(sorted_y[idx])
+        if np.isclose(cumulative[idx], midpoint) and idx + 1 < len(sorted_y):
+            median = float((sorted_y[idx] + sorted_y[idx + 1]) / 2)
+        mae = float(np.average(np.abs(y - median), weights=w))
+
+        # sklearn's poisson node impurity is half the mean Poisson deviance.
+        # It is undefined for negative targets or a non-positive node mean.
+        poisson = None
+        if np.all(y >= 0) and mean > 0:
+            positive_y = y > 0
+            terms = np.full(len(y), mean, dtype=float) - y
+            terms[positive_y] += y[positive_y] * np.log(y[positive_y] / mean)
+            poisson = float(np.average(terms, weights=w))
+        return mse, float(np.sqrt(mse)), mae, poisson
 
     def regression_block(v):
         return f":{v   :.2f}" 
@@ -205,31 +246,38 @@ def plot_tree(
         _, level = pos[node]
 
         v = tree.value[node].item()
-
+        # Keep the existing node target label; all impurity metrics below are
+        # independently computed for every reachable original or grafted node.
+        criterion = (node_criteria or {}).get(node, model.get_params().get("criterion", "squared_error"))
+        target_label = "Median Target Value" if criterion == "absolute_error" else "Mean Target Value"
         n = tree.n_node_samples[node]
 
-
         impurity_text = ""
-
         if impurity:
-
-            impurity_text = (
-                f"\n"
-                f"MSE : {tree.impurity[node]:.2f}\n"
-                f"RMSE : {np.sqrt(tree.impurity[node]):.2f}"
-            )
+            metrics = node_metrics(node)
+            if metrics is None:
+                impurity_text = "\nMSE : N/A\nRMSE : N/A\nMAE : N/A\nPoisson Impurity : N/A"
+            else:
+                mse, rmse, mae, poisson = metrics
+                impurity_text = (f"\nMSE : {mse:.2f}"
+                                 f"\nRMSE : {rmse:.2f}"
+                                 f"\nMAE : {mae:.2f}")
+                if poisson is not None:
+                    impurity_text += f"\nPoisson Impurity : {poisson:.2f}"
+                else:
+                    impurity_text += "\nPoisson Impurity : N/A"
 
         if node == 0:
 
-            target_text = f"Target: {target:<15}" if target else ""
+            target_text = f"Target: {target}" if target else ""
             root_text = f"""Node ID : {node:<9}
 Level   : {level:<5}
 Samples : {n:<5}"""
             text = f"""ALL ROWS
     ────────────────────
     {root_text}
-    {target_text}    
-    Mean Target Value {regression_block(v)}
+   {target_text}    
+    {target_label} {regression_block(v)}
     {impurity_text} """            
             
             return text
@@ -276,7 +324,7 @@ Samples : {n:<5}"""
             text = f"""LEAF({rule})
     ────────────────────
     {node_text}
-    Mean Target Value {regression_block(v)}
+    {target_label} {regression_block(v)}
     {impurity_text}"""
 
             return text
@@ -284,7 +332,7 @@ Samples : {n:<5}"""
         text = f"""{rule}
     ────────────────────
     {node_text}
-    Mean Target Value {regression_block(v)}
+    {target_label} {regression_block(v)}
     {impurity_text}"""
 
         return text
@@ -331,6 +379,12 @@ Samples : {n:<5}"""
 
     tree_text = []
 
+    # Gradient colours scale each node's mean target between the tree's
+    # smallest and largest node values.
+    node_values = tree.value[: tree.node_count].reshape(-1)
+    value_min = float(np.min(node_values))
+    value_range = float(np.max(node_values)) - value_min
+
     def draw_nodes(
         node,
         parent=None,
@@ -355,7 +409,9 @@ Samples : {n:<5}"""
             )
 
             fc = cmap(
-                np.max(probs(v))
+                (v - value_min) / value_range
+                if value_range > 0
+                else 0.5
             )
 
         else:
@@ -427,94 +483,8 @@ Samples : {n:<5}"""
     
     fitted_fontsize = fontsize
 
-    if (fontsize is None and len(tree_text) > 0):
-
-        current_fontsize = 8.0
-        min_fontsize = 1.0
-        reduction_factor = 0.90
-
-        max_width_ratio = 0.35
-        max_height_ratio = 0.40
-
-        while (current_fontsize >= min_fontsize ):
-            
-            for txt in tree_text:
-                txt.set_fontsize(current_fontsize)
-                
-            fig.canvas.draw()
-
-            renderer = fig.canvas.get_renderer()            
-
-            boxes = []
-
-            for txt in tree_text:
-
-                bbox = (
-                    txt
-                    .get_bbox_patch()
-                    .get_window_extent(
-                        renderer
-                    )
-                )
-
-                boxes.append(bbox)
-
-            axes_bbox= ax.get_window_extent(renderer)
-            available_width= axes_bbox.width
-            available_height= axes_bbox.height
-
-            oversized= any(box.width > available_width * max_width_ratio
-                           or
-                           box.height > available_height * max_height_ratio
-                           for box in boxes)                           
-
-
-            overlap_found = False
-
-            number_of_boxes = len(boxes)
-
-            for i in range(number_of_boxes):
-
-                for j in range(
-                    i + 1,
-                    number_of_boxes
-                ):
-
-                    if boxes[i].overlaps( boxes[j]):
-
-                        overlap_found = True
-                        break
-
-                if overlap_found:
-                    break
-
-
-            if not overlap_found and not oversized:
-                break
-
-
-            current_fontsize *= (
-                reduction_factor
-            )
-
-
-        current_fontsize = max(
-            current_fontsize,
-            min_fontsize,
-        )
-
-
-        for txt in tree_text:
-
-            txt.set_fontsize(
-                current_fontsize
-            )
-
-        fitted_fontsize = (
-            current_fontsize
-        )
-
-        fig.canvas.draw()    
+    if fontsize is None and len(tree_text) > 0:
+        fitted_fontsize = fit_fontsize(fig, ax, tree_text)
 
 
     return {

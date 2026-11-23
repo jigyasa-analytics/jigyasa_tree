@@ -38,27 +38,35 @@ def create_manual_subtree(treeZ,node_index_to_changeZ,added_varZ,suggestions, tr
 
     free_nodes=list(get_free_nodes(tree_model_org,treeZ))
 
+    # Fail before mutating the tree if the original child slots are unavailable.
+    original_structure = tree_model_org.tree_
+    left_slot = int(original_structure.children_left[node_index_to_changeZ])
+    right_slot = int(original_structure.children_right[node_index_to_changeZ])
+    if left_slot == -1 or right_slot == -1 or left_slot not in free_nodes or right_slot not in free_nodes:
+        raise ValueError(
+            "Cannot attach a depth-1 subtree: both original child node IDs "
+            "must be available after pruning"
+        )
+
     tree_ind = treeZ.tree_
     org_tree_ind=tree_model_org.tree_
     
 
     feature=added_varZ
-    print(info.keys())
 
-    print(f"feature:{feature}")
     threshold=float(info["Threshold"])
     Root_Mean_Target =float(np.asarray(info["Root Node Mean Target"]).flatten()[0])
     root_samples=int(info["Samples at root node"])
-    root_mse=float(info["Root MSE"])
+    root_impurity=float(info["Root Criterion Impurity"])
 
     feature_index=list(treeZ.feature_names_in_).index(feature)
     
     tree_ind.feature[node_index_to_changeZ]=feature_index
     tree_ind.value[node_index_to_changeZ]=[[Root_Mean_Target]]
     tree_ind.threshold[node_index_to_changeZ]=threshold
-    tree_ind.impurity[node_index_to_changeZ]=root_mse
+    tree_ind.impurity[node_index_to_changeZ]=root_impurity
     tree_ind.n_node_samples[node_index_to_changeZ]=root_samples
-    tree_ind.weighted_n_node_samples[node_index_to_changeZ]=root_samples
+    tree_ind.weighted_n_node_samples[node_index_to_changeZ]=float(info["Root Weighted Samples"])
 
 
     left_id=tree_ind.children_left[node_index_to_changeZ]
@@ -69,21 +77,19 @@ def create_manual_subtree(treeZ,node_index_to_changeZ,added_varZ,suggestions, tr
 
     left_child_ind=left_id_org
     
-    print(f" {left_child_ind} is in {free_nodes}")     
     if left_child_ind in free_nodes and left_id_org !=-1:
         
-        print("LEFT CHILD UPDATE")
 
         tree_ind.children_left[node_index_to_changeZ]=left_child_ind
         left_id=tree_ind.children_left[node_index_to_changeZ]
         
         left_samples=int(info["left Node Samples"])
         left_value=float(info["left Node Mean Target"])
-        left_mse=float(info["left Node MSE"])
+        left_impurity=float(info["left Node Criterion Impurity"])
 
-        tree_ind.impurity[left_id]=left_mse
+        tree_ind.impurity[left_id]=left_impurity
         tree_ind.n_node_samples[left_id]=left_samples
-        tree_ind.weighted_n_node_samples[left_id]=left_samples
+        tree_ind.weighted_n_node_samples[left_id]=float(info["left Node Weighted Samples"])
         tree_ind.value[left_id]=[[left_value]]
 
         tree_ind.children_left[left_id]=-1
@@ -94,22 +100,20 @@ def create_manual_subtree(treeZ,node_index_to_changeZ,added_varZ,suggestions, tr
 
     right_child_ind=right_id_org
 
-    print(f" {right_child_ind} is in {free_nodes}")     
     if right_child_ind in free_nodes and right_id_org != -1:
 
 
-        print("RIGHT CHILD UPDATE")
 
         tree_ind.children_right[node_index_to_changeZ]= right_child_ind
         right_id=tree_ind.children_right[node_index_to_changeZ]
         
         right_samples=int(info["Right Node Samples"])
         right_value=float(info["Right Node Mean Target"])
-        right_mse=float(info["Right Node MSE"])
+        right_impurity=float(info["Right Node Criterion Impurity"])
         
-        tree_ind.impurity[right_id]=right_mse
+        tree_ind.impurity[right_id]=right_impurity
         tree_ind.n_node_samples[right_id]=right_samples
-        tree_ind.weighted_n_node_samples[right_id]=right_samples
+        tree_ind.weighted_n_node_samples[right_id]=float(info["Right Node Weighted Samples"])
         tree_ind.value[right_id]=[[right_value]]
 
         tree_ind.children_left[right_id]=-1
